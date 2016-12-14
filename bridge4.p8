@@ -5,10 +5,10 @@ objects = {}
 mapconstruct=function(x,y,level)
   local obj={}
   obj.position={x=x, y=y}
-  obj.level=level or 0.0001
+  obj.level=level or 0.0002
   obj.update=function(this)
-    if (btn(2)) this.position.y += 2
-    if (btn(3)) this.position.y -= 2
+    if (btn(2)) this.position.y += 1
+    this.position.y -= 2
   end
 
   obj.draw=function(this)
@@ -20,6 +20,7 @@ mapconstruct=function(x,y,level)
 
   obj.drawstone=function(this)
     if rnd(1) < this.level then
+      printh('adding object')
       add(objects, stoneconstruct(rnd(128),128))
     end
   end
@@ -30,8 +31,8 @@ stoneconstruct=function(x,y)
   local obj={}
   obj.position={x=x, y=y}
   obj.update=function(this)
-    if (btn(2)) this.position.y += 2
-    if (btn(3)) this.position.y -= 2
+    if (btn(2)) this.position.y += 1
+    this.position.y -= 2
   end
 
   obj.draw=function(this)
