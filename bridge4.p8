@@ -2,6 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 objects = {}
+mapels = {}
 collidables = {}
 
 mapconstruct = function(x,y,level)
@@ -24,11 +25,11 @@ mapconstruct = function(x,y,level)
   end
 
   obj.drawstone = function(this)
-    if (this.clock % 30 == 0 and this.clock ~= this.lastrocktime) then
+    if (this.clock % 5 == 0 and this.clock ~= this.lastrocktime) then
       if rnd(1) < this.level then
         this.lastrocktime = this.clock
-        --add(collidables, stoneconstruct(rnd(120),128))
-        add(objects, stoneconstruct(rnd(120),128))
+        add(collidables, stoneconstruct(rnd(120),128))
+        --add(objects, stoneconstruct(rnd(120),128))
       end
     end
   end
@@ -40,17 +41,18 @@ stoneconstruct = function(x, y)
   obj.clock = 0
   obj.name = 'decoration'
   obj.position = {x = x, y = y}
+  obj.triptime = 0
   obj.sprite = 33
 
   obj.update = function(this)
     if (btn(2)) this.position.y += 1
     this.position.y -= 2
 
-    if (abs((this.position.x + 4) - (bridge.position.x + 8)) < 10) then
+    if (abs((this.position.x + 4) - (bridge.position.x + 8)) < 10 and this.clock - this.triptime > 30) then
       if (this.position.y > 0 and abs((this.position.y + 4) - (bridge.position.y + 16)) < 16) then
         this.sprite = 25
         bridge.loserunner(bridge)
-        printh(this.position.x .. ', ' .. this.position.y)
+        this.triptime = this.clock
       end
     end
   end
@@ -99,7 +101,7 @@ bridgeconstruct=function(x, y)
   obj.loserunner = function(this)
     sprite = 9
     if (this.clock % 2 == 0) sprite = 10
-    add(objects, decorationconstruct(this.position.x, this.position.y - 8, sprite))
+    add(collidables, decorationconstruct(this.position.x, this.position.y - 16, sprite))
     this.runners -= 1
   end
 
@@ -152,13 +154,18 @@ bridgeconstruct=function(x, y)
 end
 
 function _init()
-  add(objects, mapconstruct(0,0))
+  add(mapels, mapconstruct(0,0))
 
   bridge = bridgeconstruct(64,48)
   add(objects, bridge)
 end
 
 function _update()
+  for value in all(mapels) do
+    value.clock += 1
+    value.update(value)
+  end
+
   for value in all(collidables) do
     value.clock += 1
     value.update(value)
@@ -173,6 +180,11 @@ end
 function _draw()
   --cls()
   camera(0, bridge.position.y - 48)
+
+  for value in all(mapels) do
+    value.draw(value)
+    if (value.name == 'decoration' and value.position.y < -10) del(objects, value)
+  end
 
   for value in all(collidables) do
     value.draw(value)
