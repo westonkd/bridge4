@@ -1,30 +1,33 @@
 pico-8 cartridge // http://www.pico-8.com
-version 8
+version 10
 __lua__
 objects = {}
-mapconstruct=function(x,y,level)
-  local obj={}
-  obj.clock=0
-  obj.name='mapconstruct'
-  obj.position={x=x, y=y}
-  obj.level=level or 0.007
-  obj.lastrocktime=-1
-  obj.update=function(this)
+collidables = {}
+
+mapconstruct = function(x,y,level)
+  local obj = {}
+  obj.clock = 0
+  obj.name = 'mapconstruct'
+  obj.position = {x = x, y = y}
+  obj.level = level or 0.007
+  obj.lastrocktime = -1
+  obj.update = function(this)
     if (btn(2)) this.position.y += 1
     this.position.y -= 2
   end
 
-  obj.draw=function(this)
-    for i=this.position.y/8,16,2 do
-       map(0,0,0,i*8,128,2)
+  obj.draw = function(this)
+    for i = this.position.y / 8, 16, 2 do
+       map(0, 0, 0, i * 8, 128, 2)
        this.drawstone(this)
     end
   end
 
-  obj.drawstone=function(this)
-    if (this.clock%30 == 0 and this.clock ~= this.lastrocktime) then
+  obj.drawstone = function(this)
+    if (this.clock % 2 == 0 and this.clock ~= this.lastrocktime) then
       if rnd(1) < this.level then
         this.lastrocktime = this.clock
+        add(collidables, stoneconstruct(rnd(120),128))
         add(objects, stoneconstruct(rnd(120),128))
       end
     end
@@ -32,28 +35,36 @@ mapconstruct=function(x,y,level)
   return obj
 end
 
-stoneconstruct=function(x,y)
-  local obj={}
-  obj.clock=0
-  obj.name='decoration'
-  obj.position={x=x, y=y}
-  obj.update=function(this)
+stoneconstruct = function(x, y)
+  local obj = {}
+  obj.clock = 0
+  obj.name = 'decoration'
+  obj.position = {x = x, y = y}
+  obj.sprite = 25
+
+  obj.update = function(this)
     if (btn(2)) this.position.y += 1
     this.position.y -= 2
+
+    if (abs((this.position.x + 4) - (bridge.position.x + 8)) < 8) then
+      if (abs((this.position.y + 4) - (bridge.position.y + 16)) < 16) then
+        this.sprite = 56
+      end
+    end
   end
 
-  obj.draw=function(this)
-    spr(33, this.position.x, this.position.y)
+  obj.draw = function(this)
+    spr(this.sprite, this.position.x, this.position.y)
   end
   return obj
 end
 
-decorationconstruct=function(x,y,sprite)
-  local obj={}
-  obj.clock=0
+decorationconstruct = function(x, y, sprite)
+  local obj = {}
+  obj.clock = 0
   obj.sprite = sprite
-  obj.name='decoration'
-  obj.position={x=x, y=y}
+  obj.name = 'decoration'
+  obj.position = {x = x, y = y}
   obj.update=function(this)
     if (btn(2)) this.position.y += 1
     this.position.y -= 2
@@ -65,65 +76,71 @@ decorationconstruct=function(x,y,sprite)
   return obj
 end
 
-bridgeconstruct=function(x,y)
-  local obj={}
-  obj.clock=0
-  obj.spriteoffset=0
-  obj.runners=5
-  obj.name='bridgeconstruct'
-  obj.lasttrailtime=-1
-  obj.position = {x=x, y=y}
-  obj.update=function(this)
+bridgeconstruct=function(x, y)
+  local obj = {}
+  obj.clock = 0
+  obj.spriteoffset = 0
+  obj.runners = 5
+  obj.name = 'bridgeconstruct'
+  obj.lasttrailtime = -1
+  obj.position = {x = x, y = y}
+
+  obj.update = function(this)
     if (btn(0) and this.position.x > 0) this.position.x -= 1
     if (btn(1) and this.position.x < 895) this.position.x += 1
+    if (this.collision(this, 1)) this.loserunner(this)
   end
 
-  obj.loserunner=function(this)
-    sprite=9
-    if (this.clock%2==0) sprite=10
-    add(objects, decorationconstruct(this.position.x, this.position.y-8, sprite))
-    this.runners-=1
+  obj.collision = function(this, spriteflag)
+    return false
   end
 
-  obj.drawtrail=function(this)
-    if (this.clock%10 == 0 and this.clock ~= this.lasttrailtime) then
+  obj.loserunner = function(this)
+    sprite = 9
+    if (this.clock % 2 == 0) sprite = 10
+    add(objects, decorationconstruct(this.position.x, this.position.y - 8, sprite))
+    this.runners -= 1
+  end
+
+  obj.drawtrail = function(this)
+    if (this.clock % 10 == 0 and this.clock ~= this.lasttrailtime) then
       if rnd(1) < 0.5 then
         this.lasttrailtime = this.clock
-        add(objects, decorationconstruct(this.position.x, this.position.y-(rnd(8)+8), 20))
-        add(objects, decorationconstruct(this.position.x + rnd(8), this.position.y-(rnd(12)+12), 20))
+        add(objects, decorationconstruct(this.position.x, this.position.y - (rnd(8) + 8), 20))
+        add(objects, decorationconstruct(this.position.x + rnd(8), this.position.y - (rnd(12) + 12), 20))
       end
     end
   end
 
-  obj.draw=function(this)
-    if (this.clock%5==0) this.swapfeet(this)
+  obj.draw = function(this)
+    if (this.clock % 5 == 0) this.swapfeet(this)
 
     this.drawtrail(this)
 
-    spr(this.spriteoffset+57, this.position.x, this.position.y-8)
-    spr(this.spriteoffset+59, this.position.x+8, this.position.y-8)
+    spr(this.spriteoffset + 57, this.position.x, this.position.y - 8)
+    spr(this.spriteoffset + 59, this.position.x + 8, this.position.y - 8)
 
     palt(0, false)
     palt(10, true)
     spr(this.spriteoffset + 5, this.position.x, this.position.y)
-    spr(this.spriteoffset + 6, this.position.x+8, this.position.y)
+    spr(this.spriteoffset + 6, this.position.x + 8, this.position.y)
 
-    spr(this.spriteoffset + 21, this.position.x, this.position.y+8)
-    spr(this.spriteoffset + 22, this.position.x+8, this.position.y+8)
+    spr(this.spriteoffset + 21, this.position.x, this.position.y + 8)
+    spr(this.spriteoffset + 22, this.position.x + 8, this.position.y + 8)
 
-    spr(this.spriteoffset + 21, this.position.x, this.position.y+16)
-    spr(this.spriteoffset + 22, this.position.x+8, this.position.y+16)
+    spr(this.spriteoffset + 21, this.position.x, this.position.y + 16)
+    spr(this.spriteoffset + 22, this.position.x + 8, this.position.y + 16)
 
-    spr(this.spriteoffset + 37, this.position.x, this.position.y+24)
-    spr(this.spriteoffset + 38, this.position.x+8, this.position.y+24)
+    spr(this.spriteoffset + 37, this.position.x, this.position.y + 24)
+    spr(this.spriteoffset + 38, this.position.x + 8, this.position.y + 24)
 
-    spr(this.spriteoffset + 53, this.position.x, this.position.y+32)
-    spr(this.spriteoffset + 54, this.position.x+8, this.position.y+32)
+    spr(this.spriteoffset + 53, this.position.x, this.position.y + 32)
+    spr(this.spriteoffset + 54, this.position.x + 8, this.position.y + 32)
     palt(10, false)
     palt(0, true)
   end
 
-  obj.swapfeet=function(this)
+  obj.swapfeet = function(this)
     if this.spriteoffset == 0 then
       this.spriteoffset = 2
     else
@@ -136,20 +153,31 @@ end
 function _init()
   add(objects, mapconstruct(0,0))
 
-  bridge=bridgeconstruct(64,48)
+  bridge = bridgeconstruct(64,48)
   add(objects, bridge)
 end
 
 function _update()
+  for value in all(collidables) do
+    value.clock += 1
+    value.update(value)
+  end
+
   for value in all(objects) do
-    value.clock+=1
+    value.clock += 1
     value.update(value)
   end
 end
 
 function _draw()
-  cls()
+  --cls()
   camera(0, bridge.position.y - 48)
+
+  for value in all(collidables) do
+    value.draw(value)
+    if (value.name == 'decoration' and value.position.y < -10) del(objects, value)
+  end
+
   for value in all(objects) do
     value.draw(value)
     if (value.name == 'decoration' and value.position.y < -10) del(objects, value)
@@ -166,13 +194,13 @@ __gfx__
 0000000044455455555555555555454400000000300000000000000da00000000000000aaa00454f444440000000000000000000000000000000000000000000
 0000000044545555555555555555544400000000a04445444444450aa04445444444450a000f0000f000f0000000000000000000000000000000000000000000
 0000000044444555555555555555444400000000a00000000000000aa00000000000000a00000000000000000000000000000000000000000000000000000000
-00000000444544555555555554544444000000006054444444544406605444444454440600000000000000000000000000000000000000000000000000000000
-0000000044445555555555555554454400000000a00000400000000ad00000400000000d00000000000000000000000000000000000000000000000000000000
-0000000044454555555555555455444400000000a04444444444440aa04444444444440a00000000000000000000000000000000000000000000000000000000
-00000000444455455555555555545444000000006000005000005006600000500000500600000000000000000000000000000000000000000000000000000000
-0000000054455455555554554554445400000000d04444444444440da04444444444440a00000000000000000000000000000000000000000000000000000000
-00000000444455555555555555445444000f0000a04000000000000aa04000000000000a00000000000000000000000000000000000000000000000000000000
-0000000044454555555555555554444400000000a04444454444440aa04444454444440a00000000000000000000000000000000000000000000000000000000
+00000000444544555555555554544444000000006054444444544406605444444454440600000600000000000000000000000000000000000000000000000000
+0000000044445555555555555554454400000000a00000400000000ad00000400000000d00666660000000000000000000000000000000000000000000000000
+0000000044454555555555555455444400000000a04444444444440aa04444444444440a06606660000000000000000000000000000000000000000000000000
+00000000444455455555555555545444000000006000005000005006600000500000500600666660000000000000000000000000000000000000000000000000
+0000000054455455555554554554445400000000d04444444444440da04444444444440a00666060000000000000000000000000000000000000000000000000
+00000000444455555555555555445444000f0000a04000000000000aa04000000000000a00666660000000000000000000000000000000000000000000000000
+0000000044454555555555555554444400000000a04444454444440aa04444454444440a00600000000000000000000000000000000000000000000000000000
 0000000000000000555555555555555500000000a00500000005000aa00500000005000a00000000000000000000000000000000000000000000000000000000
 0000000000660000555555555555555500000000d044444444444406604444444444440600000000000000000000000000000000000000000000000000000000
 0000000006676000545555555555555500000000a00000500000000ad00000500000000d00000000000000000000000000000000000000000000000000000000
@@ -287,7 +315,7 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
 __gff__
-0000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000040000000000000000000000000000000000000002000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0102020202120202020202020202020300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
