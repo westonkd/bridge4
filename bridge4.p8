@@ -101,7 +101,7 @@ bridgeconstruct=function(x, y)
   obj.loserunner = function(this)
     sprite = 9
     if (this.clock % 2 == 0) sprite = 10
-    add(collidables, decorationconstruct(this.position.x, this.position.y - 16, sprite))
+    add(collidables, decorationconstruct(this.position.x, this.position.y + 16, sprite))
     this.runners -= 1
   end
 
